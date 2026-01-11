@@ -1,9 +1,4 @@
-# 7. To simulate and study stop and wait protocol
-
 set ns [ new Simulator ]
-
-$ns color 1 blue
-$ns color 2 red
 
 set tr [ open out.tr w ]
 $ns trace-all $tr
@@ -13,36 +8,41 @@ $ns namtrace-all $nam
 
 set n0 [ $ns node ]
 set n1 [ $ns node ]
-set n2 [ $ns node ]
-set n3 [ $ns node ]
-set n4 [ $ns node ]
-set n5 [ $ns node ]
 
-$ns make-lan "$n0 $n1 $n2 $n3 $n4 $n5" 5Mb 10ms LL Queue/DropTail Mac/802_3
+$ns at 0.0 "$n0 label Sender"
+$ns at 0.0 "$n1 label Receiver"
+
+Agent/TCP set nam_tracevar_ true
+
+$ns duplex-link $n0 $n1 0.2Mb 200ms DropTail
 
 set tcp [ new Agent/TCP ]
 set sink [ new Agent/TCPSink ]
 
-$ns attach-agent $n1 $tcp
-$ns attach-agent $n5 $sink
+$tcp set window_ 1
+$tcp set maxcwnd_ 1
+
+$ns attach-agent $n0 $tcp
+$ns attach-agent $n1 $sink
 
 $ns connect $tcp $sink
 
 set cbr [ new Application/Traffic/CBR ]
 $cbr attach-agent $tcp
 
-$tcp set fid_ 1
-$sink set fid_ 2
+$ns add-agent-trace $tcp tcp
+$ns monitor-agent-trace $tcp
+$tcp set tracevar cwnd_
 
 proc finish {} {
 	global ns tr nam
-        $ns flush-trace
-        close $tr
-        close $nam
-        exec nam out.nam &
-        exit 0
+	$ns flush-trace
+	close $nam
+	close $tr
+	exec nam out.nam &
+	exit 0 
 }
 
-$ns at 0.0 "$cbr start"
-$ns at 10.0 "finish"
-$ns run
+$ns at 0.1 "$cbr start"
+$ns at 3.5 "finish"
+$ns run 
